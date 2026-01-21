@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, LogOut, User, Lock, UserPlus, Mic } from 'lucide-react';
+import { Plus, LogOut, User, Lock, UserPlus, Mic, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Channel, Profile, DMConversation } from '@/types/messenger';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,6 +23,7 @@ import { InviteMembersModal } from './InviteMembersModal';
 import { StartDMModal } from './StartDMModal';
 import { ChannelIconPicker } from './ChannelIconPicker';
 import { getChannelIcon } from './channelIcons';
+import { AdminSettingsModal } from './AdminSettingsModal';
 
 interface ChannelSidebarProps {
   selectedChannel: Channel | null;
@@ -48,12 +50,14 @@ export function ChannelSidebar({
   onChannelsLoaded,
 }: ChannelSidebarProps) {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [dmConversations, setDmConversations] = useState<DMWithProfile[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isStartDMOpen, setIsStartDMOpen] = useState(false);
+  const [isAdminSettingsOpen, setIsAdminSettingsOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({ name: '', description: '', isPrivate: false, icon: 'hash' });
   const [isCreating, setIsCreating] = useState(false);
   const [inviteChannel, setInviteChannel] = useState<Channel | null>(null);
@@ -366,6 +370,17 @@ export function ChannelSidebar({
             </p>
             <p className="truncate text-xs text-slate-400">{user?.email}</p>
           </div>
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsAdminSettingsOpen(true)}
+              className="h-8 w-8 text-slate-400 hover:text-white"
+              title="Admin Settings"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -398,6 +413,12 @@ export function ChannelSidebar({
           }
           onSelectDM(conversation, otherUser);
         }}
+      />
+
+      {/* Admin Settings Modal */}
+      <AdminSettingsModal
+        open={isAdminSettingsOpen}
+        onOpenChange={setIsAdminSettingsOpen}
       />
     </div>
   );
