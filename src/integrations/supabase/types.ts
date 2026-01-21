@@ -141,6 +141,97 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_notes: {
+        Row: {
+          action_items: Json | null
+          created_at: string | null
+          decisions: Json | null
+          id: string
+          key_points: Json | null
+          meeting_id: string | null
+          summary: string | null
+        }
+        Insert: {
+          action_items?: Json | null
+          created_at?: string | null
+          decisions?: Json | null
+          id?: string
+          key_points?: Json | null
+          meeting_id?: string | null
+          summary?: string | null
+        }
+        Update: {
+          action_items?: Json | null
+          created_at?: string | null
+          decisions?: Json | null
+          id?: string
+          key_points?: Json | null
+          meeting_id?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_notes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          audio_url: string | null
+          channel_id: string | null
+          created_at: string | null
+          created_by: string
+          external_id: string | null
+          id: string
+          meeting_date: string
+          source: string | null
+          status: string | null
+          title: string
+          transcript: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          channel_id?: string | null
+          created_at?: string | null
+          created_by: string
+          external_id?: string | null
+          id?: string
+          meeting_date?: string
+          source?: string | null
+          status?: string | null
+          title: string
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          channel_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          external_id?: string | null
+          id?: string
+          meeting_date?: string
+          source?: string | null
+          status?: string | null
+          title?: string
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           channel_id: string
