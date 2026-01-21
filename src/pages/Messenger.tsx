@@ -7,17 +7,20 @@ import { DMChatWindow } from '@/components/messenger/DMChatWindow';
 import { MeetingsPanel } from '@/components/meetings/MeetingsPanel';
 import { Channel, DMConversation, Profile } from '@/types/messenger';
 import { Loader2 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type ChatMode = 'channel' | 'dm' | 'meetings';
 
 export default function Messenger() {
   const { user, loading } = useAuth();
+  const isMobile = useIsMobile();
   const [chatMode, setChatMode] = useState<ChatMode>('channel');
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<DMConversation | null>(null);
   const [selectedDMUser, setSelectedDMUser] = useState<Profile | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [showMobileChat, setShowMobileChat] = useState(false);
 
   if (loading) {
     return (
@@ -36,6 +39,7 @@ export default function Messenger() {
     setSelectedChannel(channel);
     setSelectedConversation(null);
     setSelectedDMUser(null);
+    if (isMobile) setShowMobileChat(true);
   };
 
   const handleSelectDM = (conversation: DMConversation, otherUser: Profile) => {
@@ -43,6 +47,7 @@ export default function Messenger() {
     setSelectedConversation(conversation);
     setSelectedDMUser(otherUser);
     setSelectedChannel(null);
+    if (isMobile) setShowMobileChat(true);
   };
 
   const handleSelectMeetings = () => {
@@ -50,6 +55,11 @@ export default function Messenger() {
     setSelectedChannel(null);
     setSelectedConversation(null);
     setSelectedDMUser(null);
+    if (isMobile) setShowMobileChat(true);
+  };
+
+  const handleMobileBack = () => {
+    setShowMobileChat(false);
   };
 
   const handleChannelUpdate = (updatedChannel: Channel) => {
@@ -66,34 +76,47 @@ export default function Messenger() {
     setChannels(loadedChannels);
   };
 
+  // On mobile: show sidebar OR chat, not both
+  const showSidebar = !isMobile || !showMobileChat;
+  const showChat = !isMobile || showMobileChat;
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <ChannelSidebar
-        key={refreshKey}
-        selectedChannel={selectedChannel}
-        onSelectChannel={handleSelectChannel}
-        selectedConversation={selectedConversation}
-        onSelectDM={handleSelectDM}
-        onSelectMeetings={handleSelectMeetings}
-        isMeetingsActive={chatMode === 'meetings'}
-        onChannelsLoaded={handleChannelsLoaded}
-      />
-      {chatMode === 'channel' && (
+      {showSidebar && (
+        <ChannelSidebar
+          key={refreshKey}
+          selectedChannel={selectedChannel}
+          onSelectChannel={handleSelectChannel}
+          selectedConversation={selectedConversation}
+          onSelectDM={handleSelectDM}
+          onSelectMeetings={handleSelectMeetings}
+          isMeetingsActive={chatMode === 'meetings'}
+          onChannelsLoaded={handleChannelsLoaded}
+        />
+      )}
+      {showChat && chatMode === 'channel' && (
         <ChatWindow 
           channel={selectedChannel} 
           onChannelUpdate={handleChannelUpdate}
           onChannelDelete={handleChannelDelete}
+          onMobileBack={isMobile ? handleMobileBack : undefined}
         />
       )}
-      {chatMode === 'dm' && (
-        <DMChatWindow conversation={selectedConversation} otherUser={selectedDMUser} />
+      {showChat && chatMode === 'dm' && (
+        <DMChatWindow 
+          conversation={selectedConversation} 
+          otherUser={selectedDMUser}
+          onMobileBack={isMobile ? handleMobileBack : undefined}
+        />
       )}
-      {chatMode === 'meetings' && (
+      {showChat && chatMode === 'meetings' && (
         <div className="flex-1">
           <MeetingsPanel 
             channels={channels} 
             onClose={() => {
-              if (selectedChannel) {
+              if (isMobile) {
+                handleMobileBack();
+              } else if (selectedChannel) {
                 setChatMode('channel');
               }
             }}

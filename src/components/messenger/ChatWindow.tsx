@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, X, FileIcon, Image as ImageIcon, Hash, Lock } from 'lucide-react';
+import { Send, Paperclip, X, FileIcon, Image as ImageIcon, Hash, Lock, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Channel, Message, Profile } from '@/types/messenger';
@@ -21,9 +21,10 @@ interface ChatWindowProps {
   channel: Channel | null;
   onChannelUpdate?: (channel: Channel) => void;
   onChannelDelete?: () => void;
+  onMobileBack?: () => void;
 }
 
-export function ChatWindow({ channel, onChannelUpdate, onChannelDelete }: ChatWindowProps) {
+export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobileBack }: ChatWindowProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -229,8 +230,18 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete }: ChatWi
   return (
     <div className="relative flex flex-1 flex-col bg-white">
       {/* Channel Header */}
-      <div className="flex h-14 items-center justify-between border-b border-slate-200 px-6">
-        <div className="flex items-center gap-3">
+      <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4 md:px-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          {onMobileBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onMobileBack}
+              className="h-8 w-8 text-slate-500 hover:text-slate-700"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-500/10">
             {channel.is_private ? (
               <Lock className="h-5 w-5 text-teal-600" />

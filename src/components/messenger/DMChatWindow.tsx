@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, X, FileIcon, Image as ImageIcon } from 'lucide-react';
+import { Send, Paperclip, X, FileIcon, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DMConversation, DirectMessage, Profile } from '@/types/messenger';
@@ -13,9 +13,10 @@ import { cn } from '@/lib/utils';
 interface DMChatWindowProps {
   conversation: DMConversation | null;
   otherUser: Profile | null;
+  onMobileBack?: () => void;
 }
 
-export function DMChatWindow({ conversation, otherUser }: DMChatWindowProps) {
+export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWindowProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -193,8 +194,18 @@ export function DMChatWindow({ conversation, otherUser }: DMChatWindowProps) {
   return (
     <div className="flex flex-1 flex-col bg-white">
       {/* DM Header */}
-      <div className="flex h-14 items-center border-b border-slate-200 px-6">
-        <div className="flex items-center gap-3">
+      <div className="flex h-14 items-center border-b border-slate-200 px-4 md:px-6">
+        <div className="flex items-center gap-2 md:gap-3">
+          {onMobileBack && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onMobileBack}
+              className="h-8 w-8 text-slate-500 hover:text-slate-700"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/20 text-sm font-medium text-teal-600">
             {otherUser.username[0]?.toUpperCase() || '?'}
           </div>
