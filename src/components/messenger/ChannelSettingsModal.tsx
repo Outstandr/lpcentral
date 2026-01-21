@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Lock, Hash, Settings, Trash2 } from 'lucide-react';
+import { Lock, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Channel } from '@/types/messenger';
@@ -26,6 +26,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { ChannelIconPicker } from './ChannelIconPicker';
+import { getChannelIcon } from './channelIcons';
 
 interface ChannelSettingsModalProps {
   channel: Channel;
@@ -46,6 +48,7 @@ export function ChannelSettingsModal({
   const { toast } = useToast();
   const [name, setName] = useState(channel.name);
   const [description, setDescription] = useState(channel.description || '');
+  const [icon, setIcon] = useState(channel.icon || 'hash');
   const [isPrivate, setIsPrivate] = useState(channel.is_private);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -55,6 +58,7 @@ export function ChannelSettingsModal({
     if (open) {
       setName(channel.name);
       setDescription(channel.description || '');
+      setIcon(channel.icon || 'hash');
       setIsPrivate(channel.is_private);
     }
   }, [open, channel]);
@@ -67,6 +71,7 @@ export function ChannelSettingsModal({
     const updates = {
       name: name.toLowerCase().replace(/\s+/g, '-'),
       description: description || null,
+      icon,
       is_private: isPrivate,
     };
 
@@ -144,13 +149,20 @@ export function ChannelSettingsModal({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="channel-name" className="text-slate-300">Name</Label>
-              <Input
-                id="channel-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="border-slate-600 bg-slate-700 text-white"
-                placeholder="channel-name"
-              />
+              <div className="flex gap-2">
+                <ChannelIconPicker
+                  value={icon}
+                  onChange={setIcon}
+                  disabled={isSaving}
+                />
+                <Input
+                  id="channel-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="border-slate-600 bg-slate-700 text-white"
+                  placeholder="channel-name"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -168,11 +180,10 @@ export function ChannelSettingsModal({
             <div className="rounded-lg border border-slate-600 bg-slate-700 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {isPrivate ? (
-                    <Lock className="h-5 w-5 text-teal-400" />
-                  ) : (
-                    <Hash className="h-5 w-5 text-slate-400" />
-                  )}
+                  {(() => {
+                    const IconComponent = isPrivate ? Lock : getChannelIcon(icon);
+                    return <IconComponent className="h-5 w-5 text-teal-400" />;
+                  })()}
                   <div>
                     <Label htmlFor="is-private" className="text-sm font-medium text-white">
                       Private channel
