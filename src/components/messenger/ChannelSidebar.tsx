@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Hash, Plus, LogOut, User, Lock, UserPlus } from 'lucide-react';
+import { Hash, Plus, LogOut, User, Lock, UserPlus, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Channel, Profile } from '@/types/messenger';
+import { Channel, Profile, DMConversation } from '@/types/messenger';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
@@ -19,18 +19,33 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { InviteMembersModal } from './InviteMembersModal';
+import { StartDMModal } from './StartDMModal';
 
 interface ChannelSidebarProps {
   selectedChannel: Channel | null;
   onSelectChannel: (channel: Channel) => void;
+  selectedConversation: DMConversation | null;
+  onSelectDM: (conversation: DMConversation, otherUser: Profile) => void;
 }
 
-export function ChannelSidebar({ selectedChannel, onSelectChannel }: ChannelSidebarProps) {
+interface DMWithProfile {
+  conversation: DMConversation;
+  otherUser: Profile;
+}
+
+export function ChannelSidebar({ 
+  selectedChannel, 
+  onSelectChannel, 
+  selectedConversation,
+  onSelectDM 
+}: ChannelSidebarProps) {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [dmConversations, setDmConversations] = useState<DMWithProfile[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isStartDMOpen, setIsStartDMOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({ name: '', description: '', isPrivate: false });
   const [isCreating, setIsCreating] = useState(false);
   const [inviteChannel, setInviteChannel] = useState<Channel | null>(null);
@@ -38,6 +53,7 @@ export function ChannelSidebar({ selectedChannel, onSelectChannel }: ChannelSide
   useEffect(() => {
     fetchChannels();
     fetchProfile();
+    fetchDMConversations();
   }, [user]);
 
   const fetchChannels = async () => {
@@ -67,6 +83,48 @@ export function ChannelSidebar({ selectedChannel, onSelectChannel }: ChannelSide
 
     if (!error && data) {
       setProfile(data as Profile);
+    }
+  };
+
+  const fetchDMConversations = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('dm_conversations')
+      .select('*')
+      .or(`participant_one.eq.${user.id},participant_two.eq.${user.id}`)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching DM conversations:', error);
+      return;
+    }
+
+    // Fetch other user profiles for each conversation
+    const conversations = data as DMConversation[];
+    const otherUserIds = conversations.map(c => 
+      c.participant_one === user.id ? c.participant_two : c.participant_one
+    );
+
+    if (otherUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('user_id', otherUserIds);
+
+      if (profiles) {
+        const profilesMap: Record<string, Profile> = {};
+        (profiles as Profile[]).forEach(p => {
+          profilesMap[p.user_id] = p;
+        });
+
+        const dmsWithProfiles: DMWithProfile[] = conversations.map(c => ({
+          conversation: c,
+          otherUser: profilesMap[c.participant_one === user.id ? c.participant_two : c.participant_one]
+        })).filter(dm => dm.otherUser); // Filter out any without profile
+
+        setDmConversations(dmsWithProfiles);
+      }
     }
   };
 
@@ -193,7 +251,7 @@ export function ChannelSidebar({ selectedChannel, onSelectChannel }: ChannelSide
                 onClick={() => onSelectChannel(channel)}
                 className={cn(
                   "flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors",
-                  selectedChannel?.id === channel.id
+                  selectedChannel?.id === channel.id && !selectedConversation
                     ? "bg-teal-500/20 text-teal-300"
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 )}
@@ -220,6 +278,42 @@ export function ChannelSidebar({ selectedChannel, onSelectChannel }: ChannelSide
               )}
             </div>
           ))}
+        </div>
+
+        {/* Direct Messages Section */}
+        <div className="mt-6 mb-2 flex items-center justify-between px-2">
+          <span className="text-xs font-semibold uppercase text-slate-400">Direct Messages</span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-5 w-5 text-slate-400 hover:text-white"
+            onClick={() => setIsStartDMOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="space-y-0.5">
+          {dmConversations.map(({ conversation, otherUser }) => (
+            <button
+              key={conversation.id}
+              onClick={() => onSelectDM(conversation, otherUser)}
+              className={cn(
+                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors",
+                selectedConversation?.id === conversation.id
+                  ? "bg-teal-500/20 text-teal-300"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              )}
+            >
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-xs font-medium text-teal-400">
+                {otherUser.username[0]?.toUpperCase() || '?'}
+              </div>
+              <span className="truncate">{otherUser.username}</span>
+            </button>
+          ))}
+          {dmConversations.length === 0 && (
+            <p className="px-2 text-xs text-slate-500">No conversations yet</p>
+          )}
         </div>
       </ScrollArea>
 
@@ -254,6 +348,20 @@ export function ChannelSidebar({ selectedChannel, onSelectChannel }: ChannelSide
           onOpenChange={(open) => !open && setInviteChannel(null)}
         />
       )}
+
+      {/* Start DM Modal */}
+      <StartDMModal
+        open={isStartDMOpen}
+        onOpenChange={setIsStartDMOpen}
+        onStartConversation={(conversation, otherUser) => {
+          // Add to list if not already there
+          const exists = dmConversations.some(dm => dm.conversation.id === conversation.id);
+          if (!exists) {
+            setDmConversations(prev => [{ conversation, otherUser }, ...prev]);
+          }
+          onSelectDM(conversation, otherUser);
+        }}
+      />
     </div>
   );
 }

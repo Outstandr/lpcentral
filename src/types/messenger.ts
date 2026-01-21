@@ -30,3 +30,23 @@ export interface Message {
   updated_at: string;
   profiles?: Profile;
 }
+
+export interface DMConversation {
+  id: string;
+  participant_one: string;
+  participant_two: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DirectMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string | null;
+  file_url: string | null;
+  file_name: string | null;
+  file_type: string | null;
+  created_at: string;
+  updated_at: string;
+}
