@@ -128,11 +128,11 @@ export function MessageBubble({
           {message.file_url && (
             <div className={cn(message.content && "mt-2")}>
               {isImageFile(message.file_type) ? (
-                <a href={message.file_url} target="_blank" rel="noopener noreferrer">
+                <a href={message.file_url} target="_blank" rel="noopener noreferrer" className="block">
                   <img
                     src={message.file_url}
                     alt={message.file_name || 'Uploaded image'}
-                    className="max-w-xs rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                    className="max-w-full md:max-w-xs rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                   />
                 </a>
               ) : (
