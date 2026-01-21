@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Hash, Plus, LogOut, User, Lock, UserPlus, MessageCircle, Mic } from 'lucide-react';
+import { Plus, LogOut, User, Lock, UserPlus, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Channel, Profile, DMConversation } from '@/types/messenger';
@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { InviteMembersModal } from './InviteMembersModal';
 import { StartDMModal } from './StartDMModal';
+import { ChannelIconPicker } from './ChannelIconPicker';
+import { getChannelIcon } from './channelIcons';
 
 interface ChannelSidebarProps {
   selectedChannel: Channel | null;
@@ -52,7 +54,7 @@ export function ChannelSidebar({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isStartDMOpen, setIsStartDMOpen] = useState(false);
-  const [newChannel, setNewChannel] = useState({ name: '', description: '', isPrivate: false });
+  const [newChannel, setNewChannel] = useState({ name: '', description: '', isPrivate: false, icon: 'hash' });
   const [isCreating, setIsCreating] = useState(false);
   const [inviteChannel, setInviteChannel] = useState<Channel | null>(null);
 
@@ -147,6 +149,7 @@ export function ChannelSidebar({
         description: newChannel.description || null,
         created_by: user.id,
         is_private: newChannel.isPrivate,
+        icon: newChannel.icon,
       })
       .select()
       .single();
@@ -171,7 +174,7 @@ export function ChannelSidebar({
 
     setIsCreating(false);
     setChannels([...channels, data as Channel]);
-    setNewChannel({ name: '', description: '', isPrivate: false });
+    setNewChannel({ name: '', description: '', isPrivate: false, icon: 'hash' });
     setIsCreateOpen(false);
     onSelectChannel(data as Channel);
     toast({
@@ -204,14 +207,21 @@ export function ChannelSidebar({
               <form onSubmit={handleCreateChannel} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="channel-name" className="text-slate-300">Name</Label>
-                  <Input
-                    id="channel-name"
-                    placeholder="e.g. marketing"
-                    value={newChannel.name}
-                    onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}
-                    className="border-slate-600 bg-slate-700 text-white"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <ChannelIconPicker
+                      value={newChannel.icon}
+                      onChange={(icon) => setNewChannel({ ...newChannel, icon })}
+                      disabled={isCreating}
+                    />
+                    <Input
+                      id="channel-name"
+                      placeholder="e.g. marketing"
+                      value={newChannel.name}
+                      onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}
+                      className="border-slate-600 bg-slate-700 text-white"
+                      required
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="channel-desc" className="text-slate-300">Description (optional)</Label>
@@ -263,11 +273,10 @@ export function ChannelSidebar({
                     : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                 )}
               >
-                {channel.is_private ? (
-                  <Lock className="h-4 w-4 shrink-0" />
-                ) : (
-                  <Hash className="h-4 w-4 shrink-0" />
-                )}
+                {(() => {
+                  const IconComponent = channel.is_private ? Lock : getChannelIcon(channel.icon);
+                  return <IconComponent className="h-4 w-4 shrink-0" />;
+                })()}
                 <span className="truncate">{channel.name}</span>
               </button>
               {channel.is_private && channel.created_by === user?.id && (
