@@ -15,6 +15,7 @@ import { MediaPanel } from './MediaPanel';
 import { SearchMessagesBar } from './SearchMessagesBar';
 import { InviteMembersModal } from './InviteMembersModal';
 import { ChannelSettingsModal } from './ChannelSettingsModal';
+import { MessageBubble } from './MessageBubble';
 
 interface ChatWindowProps {
   channel: Channel | null;
@@ -286,60 +287,14 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete }: ChatWi
             const isHighlighted = highlightedMessageId === message.id;
 
             return (
-              <div 
-                key={message.id} 
-                id={`message-${message.id}`}
-                className={cn(
-                  "group rounded-lg px-2 py-1 -mx-2 transition-colors duration-300",
-                  !showHeader && "mt-1",
-                  isHighlighted && "bg-yellow-100"
-                )}
-              >
-                {showHeader && (
-                  <div className="mb-1 flex items-center gap-2">
-                    <div className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium text-white shadow-sm",
-                      isOwn ? "bg-gradient-to-br from-teal-400 to-teal-600" : "bg-gradient-to-br from-slate-400 to-slate-500"
-                    )}>
-                      {profile?.username?.[0]?.toUpperCase() || '?'}
-                    </div>
-                    <span className="font-semibold text-slate-900">
-                      {profile?.username || 'Unknown'}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {format(new Date(message.created_at), 'h:mm a')}
-                    </span>
-                  </div>
-                )}
-                <div className={cn("ml-11", !showHeader && "")}>
-                  {message.content && (
-                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                  )}
-                  {message.file_url && (
-                    <div className="mt-2">
-                      {isImageFile(message.file_type) ? (
-                        <a href={message.file_url} target="_blank" rel="noopener noreferrer">
-                          <img
-                            src={message.file_url}
-                            alt={message.file_name || 'Uploaded image'}
-                            className="max-w-sm rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
-                          />
-                        </a>
-                      ) : (
-                        <a
-                          href={message.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
-                        >
-                          <FileIcon className="h-4 w-4 text-slate-400" />
-                          {message.file_name || 'Download file'}
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <MessageBubble
+                key={message.id}
+                message={message}
+                profile={profile}
+                showHeader={showHeader}
+                isOwn={isOwn}
+                isHighlighted={isHighlighted}
+              />
             );
           })}
         </div>
