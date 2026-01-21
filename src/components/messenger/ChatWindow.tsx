@@ -291,6 +291,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete }: ChatWi
                 key={message.id}
                 message={message}
                 profile={profile}
+                profiles={profiles}
                 showHeader={showHeader}
                 isOwn={isOwn}
                 isHighlighted={isHighlighted}
