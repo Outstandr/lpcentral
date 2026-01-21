@@ -213,7 +213,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
 
   if (!channel) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-slate-50">
+      <div className="flex flex-1 w-full items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-200">
             <Hash className="h-8 w-8 text-slate-400" />
@@ -228,7 +228,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
   const isOwner = channel.created_by === user?.id;
 
   return (
-    <div className="relative flex flex-1 flex-col bg-white">
+    <div className="relative flex flex-1 w-full flex-col bg-white">
       {/* Channel Header */}
       <div className="flex h-14 items-center justify-between border-b border-slate-200 px-4 md:px-6">
         <div className="flex items-center gap-2 md:gap-3">

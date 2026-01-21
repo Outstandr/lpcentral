@@ -185,14 +185,14 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
 
   if (!conversation || !otherUser) {
     return (
-      <div className="flex flex-1 items-center justify-center bg-slate-50">
+      <div className="flex flex-1 w-full items-center justify-center bg-slate-50">
         <p className="text-slate-400">Select a conversation to start chatting</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-white">
+    <div className="flex flex-1 w-full flex-col bg-white">
       {/* DM Header */}
       <div className="flex h-14 items-center border-b border-slate-200 px-4 md:px-6">
         <div className="flex items-center gap-2 md:gap-3">
