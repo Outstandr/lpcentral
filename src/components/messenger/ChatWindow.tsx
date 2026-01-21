@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, X, FileIcon, Image as ImageIcon } from 'lucide-react';
+import { Send, Paperclip, X, FileIcon, Image as ImageIcon, Hash, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Channel, Message, Profile } from '@/types/messenger';
@@ -9,6 +9,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ChatHeaderMenu } from './ChatHeaderMenu';
+import { ChannelInfoPanel } from './ChannelInfoPanel';
+import { MediaPanel } from './MediaPanel';
+import { SearchMessagesBar } from './SearchMessagesBar';
+import { InviteMembersModal } from './InviteMembersModal';
 
 interface ChatWindowProps {
   channel: Channel | null;
@@ -22,6 +27,11 @@ export function ChatWindow({ channel }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [showMedia, setShowMedia] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -186,41 +196,105 @@ export function ChatWindow({ channel }: ChatWindowProps) {
     return type?.startsWith('image/');
   };
 
+  const scrollToMessage = (messageId: string) => {
+    setHighlightedMessageId(messageId);
+    const element = document.getElementById(`message-${messageId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => setHighlightedMessageId(null), 2000);
+    }
+  };
+
   if (!channel) {
     return (
       <div className="flex flex-1 items-center justify-center bg-slate-50">
-        <p className="text-slate-400">Select a channel to start chatting</p>
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-200">
+            <Hash className="h-8 w-8 text-slate-400" />
+          </div>
+          <p className="text-lg font-medium text-slate-600">Select a channel</p>
+          <p className="text-sm text-slate-400">Choose a channel from the sidebar to start chatting</p>
+        </div>
       </div>
     );
   }
 
+  const isOwner = channel.created_by === user?.id;
+
   return (
-    <div className="flex flex-1 flex-col bg-white">
+    <div className="relative flex flex-1 flex-col bg-white">
       {/* Channel Header */}
-      <div className="flex h-14 items-center border-b border-slate-200 px-6">
-        <div>
-          <h2 className="font-semibold text-slate-900">#{channel.name}</h2>
-          {channel.description && (
-            <p className="text-xs text-slate-500">{channel.description}</p>
-          )}
+      <div className="flex h-14 items-center justify-between border-b border-slate-200 px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-500/10">
+            {channel.is_private ? (
+              <Lock className="h-5 w-5 text-teal-600" />
+            ) : (
+              <Hash className="h-5 w-5 text-teal-600" />
+            )}
+          </div>
+          <div>
+            <h2 className="font-semibold text-slate-900">{channel.name}</h2>
+            {channel.description && (
+              <p className="text-xs text-slate-500 truncate max-w-xs">{channel.description}</p>
+            )}
+          </div>
         </div>
+        <ChatHeaderMenu
+          channel={channel}
+          onShowInfo={() => setShowInfo(true)}
+          onShowMedia={() => setShowMedia(true)}
+          onSearchMessages={() => setShowSearch(true)}
+          onInviteMembers={isOwner && channel.is_private ? () => setShowInvite(true) : undefined}
+          isOwner={isOwner}
+        />
       </div>
+
+      {/* Search Bar */}
+      <SearchMessagesBar
+        channel={channel}
+        open={showSearch}
+        onClose={() => setShowSearch(false)}
+        onResultClick={scrollToMessage}
+      />
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-6" ref={scrollRef}>
         <div className="space-y-4">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-teal-500/10">
+                {channel.is_private ? (
+                  <Lock className="h-6 w-6 text-teal-500" />
+                ) : (
+                  <Hash className="h-6 w-6 text-teal-500" />
+                )}
+              </div>
+              <p className="text-sm font-medium">Welcome to #{channel.name}</p>
+              <p className="text-xs">This is the start of the channel. Say hello!</p>
+            </div>
+          )}
           {messages.map((message, index) => {
             const profile = profiles[message.user_id];
             const showHeader = index === 0 || messages[index - 1].user_id !== message.user_id;
             const isOwn = message.user_id === user?.id;
+            const isHighlighted = highlightedMessageId === message.id;
 
             return (
-              <div key={message.id} className={cn("group", !showHeader && "mt-1")}>
+              <div 
+                key={message.id} 
+                id={`message-${message.id}`}
+                className={cn(
+                  "group rounded-lg px-2 py-1 -mx-2 transition-colors duration-300",
+                  !showHeader && "mt-1",
+                  isHighlighted && "bg-yellow-100"
+                )}
+              >
                 {showHeader && (
                   <div className="mb-1 flex items-center gap-2">
                     <div className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium text-white",
-                      isOwn ? "bg-teal-500" : "bg-slate-400"
+                      "flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium text-white shadow-sm",
+                      isOwn ? "bg-gradient-to-br from-teal-400 to-teal-600" : "bg-gradient-to-br from-slate-400 to-slate-500"
                     )}>
                       {profile?.username?.[0]?.toUpperCase() || '?'}
                     </div>
@@ -232,9 +306,9 @@ export function ChatWindow({ channel }: ChatWindowProps) {
                     </span>
                   </div>
                 )}
-                <div className={cn("ml-10", !showHeader && "")}>
+                <div className={cn("ml-11", !showHeader && "")}>
                   {message.content && (
-                    <p className="text-slate-700 whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{message.content}</p>
                   )}
                   {message.file_url && (
                     <div className="mt-2">
@@ -320,6 +394,25 @@ export function ChatWindow({ channel }: ChatWindowProps) {
           </Button>
         </form>
       </div>
+
+      {/* Panels */}
+      <ChannelInfoPanel
+        channel={channel}
+        open={showInfo}
+        onOpenChange={setShowInfo}
+      />
+      <MediaPanel
+        channel={channel}
+        open={showMedia}
+        onOpenChange={setShowMedia}
+      />
+      {channel.is_private && isOwner && (
+        <InviteMembersModal
+          channel={channel}
+          open={showInvite}
+          onOpenChange={setShowInvite}
+        />
+      )}
     </div>
   );
 }
