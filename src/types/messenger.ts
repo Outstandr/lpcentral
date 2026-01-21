@@ -13,6 +13,7 @@ export interface Channel {
   name: string;
   description: string | null;
   is_private: boolean;
+  icon: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

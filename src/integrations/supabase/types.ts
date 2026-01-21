@@ -48,6 +48,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          icon: string | null
           id: string
           is_private: boolean | null
           name: string
@@ -57,6 +58,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          icon?: string | null
           id?: string
           is_private?: boolean | null
           name: string
@@ -66,6 +68,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          icon?: string | null
           id?: string
           is_private?: boolean | null
           name?: string
