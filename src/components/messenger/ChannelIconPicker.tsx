@@ -18,18 +18,19 @@ export function ChannelIconPicker({ value, onChange, disabled }: ChannelIconPick
   const IconComponent = selectedIcon.icon;
 
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           variant="outline"
           className="h-10 w-10 p-0 border-slate-600 bg-slate-700 hover:bg-slate-600"
           disabled={disabled}
         >
-          <IconComponent className="h-5 w-5 text-slate-300" />
+          <IconComponent className="h-5 w-5 text-teal-400" />
         </Button>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-64 p-2 border-slate-600 bg-slate-700" 
+        className="w-64 p-2 border-slate-600 bg-slate-700 z-[100]" 
         align="start"
         sideOffset={8}
       >
