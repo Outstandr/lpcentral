@@ -188,7 +188,7 @@ export function ChannelSidebar({
   };
 
   return (
-    <div className="flex h-full w-64 flex-col bg-slate-900 text-white">
+    <div className="flex h-full w-full md:w-64 flex-col bg-slate-900 text-white">
       {/* Workspace Header */}
       <div className="flex h-14 items-center border-b border-slate-700 px-4">
         <h1 className="text-lg font-semibold text-white">Team Messenger</h1>
