@@ -4,10 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { ChannelSidebar } from '@/components/messenger/ChannelSidebar';
 import { ChatWindow } from '@/components/messenger/ChatWindow';
 import { DMChatWindow } from '@/components/messenger/DMChatWindow';
+import { MeetingsPanel } from '@/components/meetings/MeetingsPanel';
 import { Channel, DMConversation, Profile } from '@/types/messenger';
 import { Loader2 } from 'lucide-react';
 
-type ChatMode = 'channel' | 'dm';
+type ChatMode = 'channel' | 'dm' | 'meetings';
 
 export default function Messenger() {
   const { user, loading } = useAuth();
@@ -16,6 +17,7 @@ export default function Messenger() {
   const [selectedConversation, setSelectedConversation] = useState<DMConversation | null>(null);
   const [selectedDMUser, setSelectedDMUser] = useState<Profile | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [channels, setChannels] = useState<Channel[]>([]);
 
   if (loading) {
     return (
@@ -43,14 +45,25 @@ export default function Messenger() {
     setSelectedChannel(null);
   };
 
+  const handleSelectMeetings = () => {
+    setChatMode('meetings');
+    setSelectedChannel(null);
+    setSelectedConversation(null);
+    setSelectedDMUser(null);
+  };
+
   const handleChannelUpdate = (updatedChannel: Channel) => {
     setSelectedChannel(updatedChannel);
-    setRefreshKey(prev => prev + 1); // Trigger sidebar refresh
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleChannelDelete = () => {
     setSelectedChannel(null);
-    setRefreshKey(prev => prev + 1); // Trigger sidebar refresh
+    setRefreshKey(prev => prev + 1);
+  };
+
+  const handleChannelsLoaded = (loadedChannels: Channel[]) => {
+    setChannels(loadedChannels);
   };
 
   return (
@@ -61,15 +74,31 @@ export default function Messenger() {
         onSelectChannel={handleSelectChannel}
         selectedConversation={selectedConversation}
         onSelectDM={handleSelectDM}
+        onSelectMeetings={handleSelectMeetings}
+        isMeetingsActive={chatMode === 'meetings'}
+        onChannelsLoaded={handleChannelsLoaded}
       />
-      {chatMode === 'channel' ? (
+      {chatMode === 'channel' && (
         <ChatWindow 
           channel={selectedChannel} 
           onChannelUpdate={handleChannelUpdate}
           onChannelDelete={handleChannelDelete}
         />
-      ) : (
+      )}
+      {chatMode === 'dm' && (
         <DMChatWindow conversation={selectedConversation} otherUser={selectedDMUser} />
+      )}
+      {chatMode === 'meetings' && (
+        <div className="flex-1">
+          <MeetingsPanel 
+            channels={channels} 
+            onClose={() => {
+              if (selectedChannel) {
+                setChatMode('channel');
+              }
+            }}
+          />
+        </div>
       )}
     </div>
   );

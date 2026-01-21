@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Hash, Plus, LogOut, User, Lock, UserPlus, MessageCircle } from 'lucide-react';
+import { Hash, Plus, LogOut, User, Lock, UserPlus, MessageCircle, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Channel, Profile, DMConversation } from '@/types/messenger';
@@ -26,6 +26,9 @@ interface ChannelSidebarProps {
   onSelectChannel: (channel: Channel) => void;
   selectedConversation: DMConversation | null;
   onSelectDM: (conversation: DMConversation, otherUser: Profile) => void;
+  onSelectMeetings?: () => void;
+  isMeetingsActive?: boolean;
+  onChannelsLoaded?: (channels: Channel[]) => void;
 }
 
 interface DMWithProfile {
@@ -37,7 +40,10 @@ export function ChannelSidebar({
   selectedChannel, 
   onSelectChannel, 
   selectedConversation,
-  onSelectDM 
+  onSelectDM,
+  onSelectMeetings,
+  isMeetingsActive,
+  onChannelsLoaded,
 }: ChannelSidebarProps) {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -66,6 +72,7 @@ export function ChannelSidebar({
       console.error('Error fetching channels:', error);
     } else {
       setChannels(data as Channel[]);
+      onChannelsLoaded?.(data as Channel[]);
       if (data.length > 0 && !selectedChannel) {
         onSelectChannel(data[0] as Channel);
       }
@@ -315,6 +322,27 @@ export function ChannelSidebar({
             <p className="px-2 text-xs text-slate-500">No conversations yet</p>
           )}
         </div>
+
+        {/* Meetings Section */}
+        {onSelectMeetings && (
+          <div className="mt-6">
+            <div className="mb-2 px-2">
+              <span className="text-xs font-semibold uppercase text-slate-400">Tools</span>
+            </div>
+            <button
+              onClick={onSelectMeetings}
+              className={cn(
+                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors",
+                isMeetingsActive
+                  ? "bg-teal-500/20 text-teal-300"
+                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              )}
+            >
+              <Mic className="h-4 w-4" />
+              <span>Meetings</span>
+            </button>
+          </div>
+        )}
       </ScrollArea>
 
       {/* User Footer */}
