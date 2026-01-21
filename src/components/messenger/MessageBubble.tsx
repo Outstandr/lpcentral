@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { FileIcon } from 'lucide-react';
 import { Message, Profile } from '@/types/messenger';
 import { cn } from '@/lib/utils';
+import { MessageActions } from './MessageActions';
 
 // Generate consistent color from user ID
 function getUserColor(userId: string): string {
@@ -56,6 +57,7 @@ function getUserAvatarColor(userId: string): string {
 interface MessageBubbleProps {
   message: Message;
   profile: Profile | undefined;
+  profiles: Record<string, Profile>;
   showHeader: boolean;
   isOwn: boolean;
   isHighlighted: boolean;
@@ -63,7 +65,8 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ 
   message, 
-  profile, 
+  profile,
+  profiles,
   showHeader, 
   isOwn, 
   isHighlighted 
@@ -152,6 +155,9 @@ export function MessageBubble({
               {format(new Date(message.created_at), 'h:mm a')}
             </span>
           )}
+
+          {/* Message Actions (Reactions, Notes, Moderation) */}
+          <MessageActions message={message} profiles={profiles} />
         </div>
       </div>
     </div>
