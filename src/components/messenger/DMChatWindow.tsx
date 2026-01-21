@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, X, FileIcon, Image as ImageIcon, ArrowLeft } from 'lucide-react';
+import { Send, Paperclip, X, FileIcon, Image as ImageIcon, ArrowLeft, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { DMConversation, DirectMessage, Profile } from '@/types/messenger';
@@ -167,10 +167,12 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
+      // 50MB limit for videos, 10MB for other files
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
         toast({
           title: "File too large",
-          description: "Maximum file size is 10MB",
+          description: file.type.startsWith('video/') ? "Maximum video size is 50MB" : "Maximum file size is 10MB",
           variant: "destructive"
         });
         return;
@@ -181,6 +183,10 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
 
   const isImageFile = (type: string | null) => {
     return type?.startsWith('image/');
+  };
+
+  const isVideoFile = (type: string | null) => {
+    return type?.startsWith('video/');
   };
 
   if (!conversation || !otherUser) {
@@ -246,13 +252,21 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
                   {message.file_url && (
                     <div className="mt-2">
                       {isImageFile(message.file_type) ? (
-                        <a href={message.file_url} target="_blank" rel="noopener noreferrer">
+                        <a href={message.file_url} target="_blank" rel="noopener noreferrer" className="block">
                           <img
                             src={message.file_url}
                             alt={message.file_name || 'Uploaded image'}
-                            className="max-w-sm rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
+                            className="max-w-full md:max-w-sm rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                           />
                         </a>
+                      ) : isVideoFile(message.file_type) ? (
+                        <video
+                          src={message.file_url}
+                          controls
+                          className="max-w-full md:max-w-sm rounded-lg border border-slate-200 shadow-sm"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
                       ) : (
                         <a
                           href={message.file_url}
@@ -279,6 +293,8 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2">
             {selectedFile.type.startsWith('image/') ? (
               <ImageIcon className="h-4 w-4 text-slate-500" />
+            ) : selectedFile.type.startsWith('video/') ? (
+              <Video className="h-4 w-4 text-slate-500" />
             ) : (
               <FileIcon className="h-4 w-4 text-slate-500" />
             )}
@@ -299,7 +315,7 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
             type="file"
             className="hidden"
             onChange={handleFileSelect}
-            accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+            accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip"
           />
           <Button
             type="button"

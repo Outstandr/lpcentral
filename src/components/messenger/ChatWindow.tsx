@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, X, FileIcon, Image as ImageIcon, Hash, Lock, ArrowLeft } from 'lucide-react';
+import { Send, Paperclip, X, FileIcon, Image as ImageIcon, Hash, Lock, ArrowLeft, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Channel, Message, Profile } from '@/types/messenger';
@@ -186,10 +186,12 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 10 * 1024 * 1024) {
+      // 50MB limit for videos, 10MB for other files
+      const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
         toast({
           title: "File too large",
-          description: "Maximum file size is 10MB",
+          description: file.type.startsWith('video/') ? "Maximum video size is 50MB" : "Maximum file size is 10MB",
           variant: "destructive"
         });
         return;
@@ -200,6 +202,10 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
 
   const isImageFile = (type: string | null) => {
     return type?.startsWith('image/');
+  };
+
+  const isVideoFile = (type: string | null) => {
+    return type?.startsWith('video/');
   };
 
   const scrollToMessage = (messageId: string) => {
@@ -318,6 +324,8 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2">
             {selectedFile.type.startsWith('image/') ? (
               <ImageIcon className="h-4 w-4 text-slate-500" />
+            ) : selectedFile.type.startsWith('video/') ? (
+              <Video className="h-4 w-4 text-slate-500" />
             ) : (
               <FileIcon className="h-4 w-4 text-slate-500" />
             )}
@@ -338,7 +346,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
             type="file"
             className="hidden"
             onChange={handleFileSelect}
-            accept="image/*,.pdf,.doc,.docx,.txt,.zip"
+            accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip"
           />
           <Button
             type="button"

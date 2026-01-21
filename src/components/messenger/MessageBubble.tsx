@@ -78,6 +78,10 @@ export function MessageBubble({
     return type?.startsWith('image/');
   };
 
+  const isVideoFile = (type: string | null) => {
+    return type?.startsWith('video/');
+  };
+
   return (
     <div 
       id={`message-${message.id}`}
@@ -135,6 +139,14 @@ export function MessageBubble({
                     className="max-w-full md:max-w-xs rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow"
                   />
                 </a>
+              ) : isVideoFile(message.file_type) ? (
+                <video
+                  src={message.file_url}
+                  controls
+                  className="max-w-full md:max-w-sm rounded-lg border border-slate-200 shadow-sm"
+                >
+                  Your browser does not support the video tag.
+                </video>
               ) : (
                 <a
                   href={message.file_url}
