@@ -15,6 +15,7 @@ export default function Messenger() {
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<DMConversation | null>(null);
   const [selectedDMUser, setSelectedDMUser] = useState<Profile | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   if (loading) {
     return (
@@ -42,16 +43,31 @@ export default function Messenger() {
     setSelectedChannel(null);
   };
 
+  const handleChannelUpdate = (updatedChannel: Channel) => {
+    setSelectedChannel(updatedChannel);
+    setRefreshKey(prev => prev + 1); // Trigger sidebar refresh
+  };
+
+  const handleChannelDelete = () => {
+    setSelectedChannel(null);
+    setRefreshKey(prev => prev + 1); // Trigger sidebar refresh
+  };
+
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <ChannelSidebar
+        key={refreshKey}
         selectedChannel={selectedChannel}
         onSelectChannel={handleSelectChannel}
         selectedConversation={selectedConversation}
         onSelectDM={handleSelectDM}
       />
       {chatMode === 'channel' ? (
-        <ChatWindow channel={selectedChannel} />
+        <ChatWindow 
+          channel={selectedChannel} 
+          onChannelUpdate={handleChannelUpdate}
+          onChannelDelete={handleChannelDelete}
+        />
       ) : (
         <DMChatWindow conversation={selectedConversation} otherUser={selectedDMUser} />
       )}

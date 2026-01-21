@@ -14,12 +14,15 @@ import { ChannelInfoPanel } from './ChannelInfoPanel';
 import { MediaPanel } from './MediaPanel';
 import { SearchMessagesBar } from './SearchMessagesBar';
 import { InviteMembersModal } from './InviteMembersModal';
+import { ChannelSettingsModal } from './ChannelSettingsModal';
 
 interface ChatWindowProps {
   channel: Channel | null;
+  onChannelUpdate?: (channel: Channel) => void;
+  onChannelDelete?: () => void;
 }
 
-export function ChatWindow({ channel }: ChatWindowProps) {
+export function ChatWindow({ channel, onChannelUpdate, onChannelDelete }: ChatWindowProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -31,6 +34,7 @@ export function ChatWindow({ channel }: ChatWindowProps) {
   const [showMedia, setShowMedia] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,7 +249,8 @@ export function ChatWindow({ channel }: ChatWindowProps) {
           onShowInfo={() => setShowInfo(true)}
           onShowMedia={() => setShowMedia(true)}
           onSearchMessages={() => setShowSearch(true)}
-          onInviteMembers={isOwner && channel.is_private ? () => setShowInvite(true) : undefined}
+          onInviteMembers={() => setShowInvite(true)}
+          onOpenSettings={() => setShowSettings(true)}
           isOwner={isOwner}
         />
       </div>
@@ -406,11 +411,18 @@ export function ChatWindow({ channel }: ChatWindowProps) {
         open={showMedia}
         onOpenChange={setShowMedia}
       />
-      {channel.is_private && isOwner && (
-        <InviteMembersModal
+      <InviteMembersModal
+        channel={channel}
+        open={showInvite}
+        onOpenChange={setShowInvite}
+      />
+      {isOwner && (
+        <ChannelSettingsModal
           channel={channel}
-          open={showInvite}
-          onOpenChange={setShowInvite}
+          open={showSettings}
+          onOpenChange={setShowSettings}
+          onChannelUpdate={(updated) => onChannelUpdate?.(updated)}
+          onChannelDelete={() => onChannelDelete?.()}
         />
       )}
     </div>
