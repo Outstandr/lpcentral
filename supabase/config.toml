@@ -2,3 +2,9 @@ project_id = "yjulazmrgbjveanjgxsk"
 
 [functions.import-meeting]
 verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.transcribe-meeting]
+verify_jwt = false
