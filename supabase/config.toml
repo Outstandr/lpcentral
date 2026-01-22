@@ -1,1 +1,4 @@
 project_id = "yjulazmrgbjveanjgxsk"
+
+[functions.import-meeting]
+verify_jwt = false
