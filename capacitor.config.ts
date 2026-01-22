@@ -5,12 +5,12 @@ const config: CapacitorConfig = {
   appName: 'Leaders Team',
   webDir: 'dist',
   
-  // Development: Hot-reload from Lovable preview
-  // Comment out the 'server' block for production builds
-  server: {
-    url: 'https://c5434383-4da6-44cd-bff9-0b5e0dfb3933.lovableproject.com?forceHideBadge=true',
-    cleartext: true
-  },
+  // Production: Load from bundled assets (webDir: 'dist')
+  // For development hot-reload, uncomment the server block below:
+  // server: {
+  //   url: 'https://c5434383-4da6-44cd-bff9-0b5e0dfb3933.lovableproject.com?forceHideBadge=true',
+  //   cleartext: true
+  // },
   
   android: {
     allowMixedContent: true,
