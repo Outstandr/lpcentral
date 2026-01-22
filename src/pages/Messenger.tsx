@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ChannelSidebar } from '@/components/messenger/ChannelSidebar';
@@ -6,7 +6,7 @@ import { ChatWindow } from '@/components/messenger/ChatWindow';
 import { DMChatWindow } from '@/components/messenger/DMChatWindow';
 import { MeetingsPanel } from '@/components/meetings/MeetingsPanel';
 import { Channel, DMConversation, Profile } from '@/types/messenger';
-import { Loader2 } from 'lucide-react';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 type ChatMode = 'channel' | 'dm' | 'meetings';
@@ -22,12 +22,27 @@ export default function Messenger() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [showMobileChat, setShowMobileChat] = useState(false);
 
+  // Handle keyboard visibility on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      // Scroll to bottom when keyboard opens on mobile
+      if (window.visualViewport) {
+        const viewport = window.visualViewport;
+        if (viewport.height < window.innerHeight * 0.8) {
+          // Keyboard is likely open
+          document.body.style.height = `${viewport.height}px`;
+        } else {
+          document.body.style.height = '100%';
+        }
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+  }, []);
+
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
-      </div>
-    );
+    return <LoadingScreen message="Loading your workspace..." />;
   }
 
   if (!user) {

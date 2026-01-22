@@ -319,7 +319,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
       </ScrollArea>
 
       {/* Message Input */}
-      <div className="border-t border-slate-200 p-4">
+      <div className="border-t border-slate-200 p-4 bg-white safe-bottom">
         {selectedFile && (
           <div className="mb-3 flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2">
             {selectedFile.type.startsWith('image/') ? (
@@ -352,7 +352,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
             type="button"
             variant="ghost"
             size="icon"
-            className="shrink-0 text-slate-500 hover:text-slate-700"
+            className="shrink-0 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             onClick={() => fileInputRef.current?.click()}
           >
             <Paperclip className="h-5 w-5" />
@@ -361,13 +361,13 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={`Message #${channel.name}`}
-            className="flex-1 border-slate-200 bg-slate-50"
+            className="flex-1 border-slate-200 bg-slate-50 focus-visible:ring-teal-500"
             disabled={isSending}
           />
           <Button
             type="submit"
             size="icon"
-            className="shrink-0 bg-teal-500 hover:bg-teal-600"
+            className="shrink-0 bg-teal-500 hover:bg-teal-600 shadow-sm"
             disabled={isSending || (!newMessage.trim() && !selectedFile)}
           >
             <Send className="h-4 w-4" />
