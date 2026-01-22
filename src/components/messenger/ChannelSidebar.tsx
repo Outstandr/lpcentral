@@ -190,9 +190,9 @@ export function ChannelSidebar({
   return (
     <div className="flex h-full w-full md:w-64 flex-col bg-slate-900 text-white">
       {/* Workspace Header */}
-      <div className="flex h-14 items-center border-b border-slate-700 px-4 safe-top">
+      <div className="flex min-h-[3.5rem] items-center border-b border-slate-700 px-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md shrink-0">
             <span className="text-sm font-bold text-white">LP</span>
           </div>
           <h1 className="text-lg font-semibold text-white">LP Central</h1>
@@ -364,7 +364,7 @@ export function ChannelSidebar({
       </ScrollArea>
 
       {/* User Footer */}
-      <div className="border-t border-slate-700 p-3 safe-bottom">
+      <div className="border-t border-slate-700 p-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-sm">
             <User className="h-4 w-4 text-white" />
