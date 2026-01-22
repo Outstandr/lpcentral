@@ -102,7 +102,16 @@ All colors MUST be HSL.
   html, body, #root {
     height: 100%;
     width: 100%;
+  }
+
+  /* Allow scrolling within app containers, not at root level for native feel */
+  html {
     overflow: hidden;
+  }
+
+  body, #root {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
