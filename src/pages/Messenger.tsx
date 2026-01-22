@@ -74,6 +74,11 @@ export default function Messenger() {
   };
 
   const handleMobileBack = () => {
+    // Clear all selections when going back on mobile so we show the sidebar cleanly
+    setChatMode('channel');
+    setSelectedChannel(null);
+    setSelectedConversation(null);
+    setSelectedDMUser(null);
     setShowMobileChat(false);
   };
 

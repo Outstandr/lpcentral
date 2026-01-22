@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mic, Square, Pause, Play, Loader2, X } from 'lucide-react';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useNativeMicrophone } from '@/hooks/useNativeMicrophone';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Channel } from '@/types/messenger';
@@ -59,13 +60,38 @@ export function MeetingRecorderModal({
     resetRecording,
   } = useAudioRecorder();
 
+  const { requestMicrophonePermission, checkMicrophoneAvailable } = useNativeMicrophone();
+
   const handleStartRecording = async () => {
     try {
+      // Check if microphone is available
+      const hasMic = await checkMicrophoneAvailable();
+      if (!hasMic) {
+        toast({
+          title: 'No Microphone Found',
+          description: 'Please connect a microphone to record meetings.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Request permission first on native platforms
+      const hasPermission = await requestMicrophonePermission();
+      if (!hasPermission) {
+        toast({
+          title: 'Microphone Access Required',
+          description: 'Please grant microphone permission in your device settings to record meetings.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       await startRecording();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to start recording:', error);
       toast({
-        title: 'Microphone Access Required',
-        description: 'Please enable microphone access to record meetings.',
+        title: 'Recording Failed',
+        description: error.message || 'Could not start recording. Please try again.',
         variant: 'destructive',
       });
     }

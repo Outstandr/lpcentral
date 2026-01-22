@@ -79,9 +79,7 @@ export function ChannelSidebar({
     } else {
       setChannels(data as Channel[]);
       onChannelsLoaded?.(data as Channel[]);
-      if (data.length > 0 && !selectedChannel) {
-        onSelectChannel(data[0] as Channel);
-      }
+      // Don't auto-select a channel - let user tap to navigate
     }
   };
 
