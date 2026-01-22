@@ -107,6 +107,8 @@ All colors MUST be HSL.
   /* Allow scrolling within app containers, not at root level for native feel */
   html {
     overflow: hidden;
+    /* Match the app's dark sidebar background for status/nav bars */
+    background-color: hsl(222.2 84% 4.9%);
   }
 
   body, #root {
@@ -116,16 +118,22 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    /* Safe area support for edge-to-edge */
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    /* Use slate-900 background to match sidebar and avoid white bars */
+    background-color: #0f172a;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Prevent pull-to-refresh and overscroll */
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Apply safe area inside the app container, not on body */
+  #root {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    background-color: #0f172a;
   }
 }
 
