@@ -81,7 +81,7 @@ export default function Messenger() {
   const showChat = !isMobile || showMobileChat;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden">
       {showSidebar && (
         <ChannelSidebar
           key={refreshKey}
@@ -110,7 +110,7 @@ export default function Messenger() {
         />
       )}
       {showChat && chatMode === 'meetings' && (
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col">
           <MeetingsPanel 
             channels={channels} 
             onClose={() => {
