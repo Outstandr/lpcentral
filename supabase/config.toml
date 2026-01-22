@@ -1,1 +1,4 @@
 project_id = "yjulazmrgbjveanjgxsk"
+
+[functions.reveal-key]
+verify_jwt = false
