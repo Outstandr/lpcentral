@@ -39,20 +39,33 @@ export const usePushNotifications = () => {
           // Save token to database
           const platform = Capacitor.getPlatform() as 'ios' | 'android';
           
-          const { error } = await supabase
+          // First try to find existing token
+          const { data: existingToken } = await supabase
             .from('push_tokens')
-            .upsert(
-              {
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('token', token.value)
+            .maybeSingle();
+
+          if (existingToken) {
+            // Update existing token
+            await supabase
+              .from('push_tokens')
+              .update({ updated_at: new Date().toISOString() })
+              .eq('id', existingToken.id);
+          } else {
+            // Insert new token
+            const { error } = await supabase
+              .from('push_tokens')
+              .insert({
                 user_id: user.id,
                 token: token.value,
                 platform,
-                updated_at: new Date().toISOString(),
-              },
-              { onConflict: 'user_id,token' }
-            );
+              });
 
-          if (error) {
-            console.error('Error saving push token:', error);
+            if (error) {
+              console.error('Error saving push token:', error);
+            }
           }
         });
 
@@ -72,9 +85,9 @@ export const usePushNotifications = () => {
           // Handle navigation based on notification data
           const data = notification.notification.data;
           if (data?.channelId) {
-            window.location.href = `/messenger?channel=${data.channelId}`;
+            window.location.href = `/chat?channel=${data.channelId}`;
           } else if (data?.conversationId) {
-            window.location.href = `/messenger?dm=${data.conversationId}`;
+            window.location.href = `/chat?dm=${data.conversationId}`;
           }
         });
       } catch (error) {
