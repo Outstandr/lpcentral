@@ -24,7 +24,6 @@ import { StartDMModal } from './StartDMModal';
 import { ChannelIconPicker } from './ChannelIconPicker';
 import { getChannelIcon } from './channelIcons';
 import { AdminSettingsModal } from './AdminSettingsModal';
-import { LPLogo } from '@/components/LPLogo';
 
 interface ChannelSidebarProps {
   selectedChannel: Channel | null;
@@ -193,7 +192,9 @@ export function ChannelSidebar({
       {/* Workspace Header */}
       <div className="flex min-h-[3.5rem] items-center border-b border-slate-700 px-4">
         <div className="flex items-center gap-3">
-          <LPLogo size={32} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md shrink-0">
+            <span className="text-sm font-bold text-white">LP</span>
+          </div>
           <h1 className="text-lg font-semibold text-white">LP Central</h1>
         </div>
       </div>
