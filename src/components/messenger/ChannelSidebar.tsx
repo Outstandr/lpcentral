@@ -190,8 +190,13 @@ export function ChannelSidebar({
   return (
     <div className="flex h-full w-full md:w-64 flex-col bg-slate-900 text-white">
       {/* Workspace Header */}
-      <div className="flex h-14 items-center border-b border-slate-700 px-4">
-        <h1 className="text-lg font-semibold text-white">LP Central</h1>
+      <div className="flex h-14 items-center border-b border-slate-700 px-4 safe-top">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 shadow-md">
+            <span className="text-sm font-bold text-white">LP</span>
+          </div>
+          <h1 className="text-lg font-semibold text-white">LP Central</h1>
+        </div>
       </div>
 
       {/* Channels List */}
@@ -359,10 +364,10 @@ export function ChannelSidebar({
       </ScrollArea>
 
       {/* User Footer */}
-      <div className="border-t border-slate-700 p-3">
+      <div className="border-t border-slate-700 p-3 safe-bottom">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/20">
-            <User className="h-4 w-4 text-teal-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-sm">
+            <User className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium text-white">
@@ -375,7 +380,7 @@ export function ChannelSidebar({
               variant="ghost"
               size="icon"
               onClick={() => setIsAdminSettingsOpen(true)}
-              className="h-8 w-8 text-slate-400 hover:text-white"
+              className="h-9 w-9 text-slate-400 hover:text-white hover:bg-slate-800"
               title="Admin Settings"
             >
               <Settings className="h-4 w-4" />
@@ -385,7 +390,8 @@ export function ChannelSidebar({
             variant="ghost"
             size="icon"
             onClick={signOut}
-            className="h-8 w-8 text-slate-400 hover:text-white"
+            className="h-9 w-9 text-slate-400 hover:text-white hover:bg-slate-800"
+            title="Sign out"
           >
             <LogOut className="h-4 w-4" />
           </Button>
