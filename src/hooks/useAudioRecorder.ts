@@ -7,6 +7,7 @@ interface UseAudioRecorderReturn {
   isPaused: boolean;
   recordingTime: number;
   audioBlob: Blob | null;
+  permissionDenied: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
   pauseRecording: () => void;
@@ -18,12 +19,16 @@ interface UseAudioRecorderReturn {
  * Cross-platform audio recorder hook.
  * Uses native Capacitor VoiceRecorder on mobile for proper permission handling.
  * Falls back to Web MediaRecorder API on web/PWA.
+ * 
+ * IMPORTANT: On native platforms, this hook handles permission requests internally.
+ * The native Android/iOS permission dialog will appear when startRecording is called.
  */
 export function useAudioRecorder(): UseAudioRecorderReturn {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   
   // Web-only refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -58,9 +63,55 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     };
   }, [isNative, stopTimer]);
 
-  const startRecordingNative = useCallback(async () => {
+  /**
+   * Request microphone permission on native platforms.
+   * Returns true if permission granted, false otherwise.
+   */
+  const requestNativePermission = useCallback(async (): Promise<boolean> => {
     try {
+      console.log('[useAudioRecorder] Checking native microphone permission...');
+      
+      // First check if we already have permission
+      const hasPermission = await VoiceRecorder.hasAudioRecordingPermission();
+      console.log('[useAudioRecorder] Has permission:', hasPermission.value);
+      
+      if (hasPermission.value) {
+        setPermissionDenied(false);
+        return true;
+      }
+
+      // Request permission - this triggers the native Android/iOS dialog
+      console.log('[useAudioRecorder] Requesting native permission...');
+      const permissionResult = await VoiceRecorder.requestAudioRecordingPermission();
+      console.log('[useAudioRecorder] Permission result:', permissionResult.value);
+      
+      if (permissionResult.value) {
+        setPermissionDenied(false);
+        return true;
+      } else {
+        setPermissionDenied(true);
+        return false;
+      }
+    } catch (error) {
+      console.error('[useAudioRecorder] Error requesting permission:', error);
+      setPermissionDenied(true);
+      return false;
+    }
+  }, []);
+
+  const startRecordingNative = useCallback(async () => {
+    // ALWAYS request permission before starting native recording
+    const hasPermission = await requestNativePermission();
+    
+    if (!hasPermission) {
+      console.error('[useAudioRecorder] Permission denied, cannot start recording');
+      throw new Error('Microphone permission denied. Please grant access in Settings.');
+    }
+
+    try {
+      console.log('[useAudioRecorder] Starting native recording...');
       const result = await VoiceRecorder.startRecording();
+      console.log('[useAudioRecorder] Start recording result:', result.value);
       
       if (result.value) {
         setIsRecording(true);
@@ -72,10 +123,10 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         throw new Error('Failed to start native recording');
       }
     } catch (error) {
-      console.error('Error starting native recording:', error);
+      console.error('[useAudioRecorder] Error starting native recording:', error);
       throw error;
     }
-  }, [startTimer]);
+  }, [requestNativePermission, startTimer]);
 
   const startRecordingWeb = useCallback(async () => {
     try {
@@ -116,14 +167,19 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
       setIsPaused(false);
       setRecordingTime(0);
       setAudioBlob(null);
+      setPermissionDenied(false);
       startTimer();
-    } catch (error) {
-      console.error('Error starting web recording:', error);
+    } catch (error: any) {
+      console.error('[useAudioRecorder] Error starting web recording:', error);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setPermissionDenied(true);
+      }
       throw error;
     }
   }, [startTimer]);
 
   const startRecording = useCallback(async () => {
+    console.log('[useAudioRecorder] startRecording called, isNative:', isNative);
     if (isNative) {
       await startRecordingNative();
     } else {
@@ -133,6 +189,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
 
   const stopRecordingNative = useCallback(async () => {
     try {
+      console.log('[useAudioRecorder] Stopping native recording...');
       const result: RecordingData = await VoiceRecorder.stopRecording();
       
       setIsRecording(false);
@@ -143,6 +200,8 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         // Convert base64 to Blob
         const base64 = result.value.recordDataBase64;
         const mimeType = result.value.mimeType || 'audio/aac';
+        
+        console.log('[useAudioRecorder] Got recording, mimeType:', mimeType, 'base64 length:', base64.length);
         
         const byteCharacters = atob(base64);
         const byteNumbers = new Array(byteCharacters.length);
@@ -155,7 +214,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         setAudioBlob(blob);
       }
     } catch (error) {
-      console.error('Error stopping native recording:', error);
+      console.error('[useAudioRecorder] Error stopping native recording:', error);
       setIsRecording(false);
       setIsPaused(false);
       stopTimer();
@@ -186,7 +245,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     if (isNative) {
       // Note: capacitor-voice-recorder v5+ supports pause/resume
       VoiceRecorder.pauseRecording().catch(err => {
-        console.error('Pause not supported or failed:', err);
+        console.error('[useAudioRecorder] Pause not supported or failed:', err);
       });
     } else if (mediaRecorderRef.current) {
       mediaRecorderRef.current.pause();
@@ -201,7 +260,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     
     if (isNative) {
       VoiceRecorder.resumeRecording().catch(err => {
-        console.error('Resume not supported or failed:', err);
+        console.error('[useAudioRecorder] Resume not supported or failed:', err);
       });
     } else if (mediaRecorderRef.current) {
       mediaRecorderRef.current.resume();
@@ -233,6 +292,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     setIsPaused(false);
     setRecordingTime(0);
     setAudioBlob(null);
+    setPermissionDenied(false);
     chunksRef.current = [];
     stopTimer();
   }, [isRecording, isNative, stopTimer]);
@@ -242,6 +302,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     isPaused,
     recordingTime,
     audioBlob,
+    permissionDenied,
     startRecording,
     stopRecording,
     pauseRecording,
