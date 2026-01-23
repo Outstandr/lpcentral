@@ -33,6 +33,7 @@ interface ChannelSidebarProps {
   onSelectMeetings?: () => void;
   isMeetingsActive?: boolean;
   onChannelsLoaded?: (channels: Channel[]) => void;
+  channels?: Channel[];
 }
 
 interface DMWithProfile {
@@ -48,11 +49,15 @@ export function ChannelSidebar({
   onSelectMeetings,
   isMeetingsActive,
   onChannelsLoaded,
+  channels: externalChannels,
 }: ChannelSidebarProps) {
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
-  const [channels, setChannels] = useState<Channel[]>([]);
+  const [localChannels, setLocalChannels] = useState<Channel[]>([]);
+  
+  // Use external channels if provided, otherwise use local state
+  const channels = externalChannels || localChannels;
   const [dmConversations, setDmConversations] = useState<DMWithProfile[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -77,7 +82,7 @@ export function ChannelSidebar({
     if (error) {
       console.error('Error fetching channels:', error);
     } else {
-      setChannels(data as Channel[]);
+      setLocalChannels(data as Channel[]);
       onChannelsLoaded?.(data as Channel[]);
       // Don't auto-select a channel - let user tap to navigate
     }
@@ -175,7 +180,7 @@ export function ChannelSidebar({
     }
 
     setIsCreating(false);
-    setChannels([...channels, data as Channel]);
+    setLocalChannels([...channels, data as Channel]);
     setNewChannel({ name: '', description: '', isPrivate: false, icon: 'hash' });
     setIsCreateOpen(false);
     onSelectChannel(data as Channel);

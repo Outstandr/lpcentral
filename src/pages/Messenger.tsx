@@ -84,6 +84,8 @@ export default function Messenger() {
 
   const handleChannelUpdate = (updatedChannel: Channel) => {
     setSelectedChannel(updatedChannel);
+    // Update the channel in the channels list directly for immediate UI feedback
+    setChannels(prev => prev.map(ch => ch.id === updatedChannel.id ? updatedChannel : ch));
     setRefreshKey(prev => prev + 1);
   };
 
@@ -112,6 +114,7 @@ export default function Messenger() {
           onSelectMeetings={handleSelectMeetings}
           isMeetingsActive={chatMode === 'meetings'}
           onChannelsLoaded={handleChannelsLoaded}
+          channels={channels}
         />
       )}
       {showChat && chatMode === 'channel' && (
