@@ -198,4 +198,36 @@ All colors MUST be HSL.
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
+
+  /* Recording pulse animation */
+  @keyframes recording-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.1);
+    }
+  }
+
+  .animate-recording-pulse {
+    animation: recording-pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Recording ring animation */
+  @keyframes recording-ring {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.4);
+      opacity: 0;
+    }
+  }
+
+  .animate-recording-ring {
+    animation: recording-ring 1.5s ease-out infinite;
+  }
 }
