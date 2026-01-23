@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Lock, Settings, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,17 +53,21 @@ export function ChannelSettingsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const prevOpenRef = useRef(false);
 
-  // Only reset form when modal opens, not when channel prop updates
+  // Only reset form when modal OPENS (transitions from closed to open)
   useEffect(() => {
-    if (open) {
+    const wasOpen = prevOpenRef.current;
+    prevOpenRef.current = open;
+    
+    // Only reset form on transition from closed to open
+    if (open && !wasOpen) {
       setName(channel.name);
       setDescription(channel.description || '');
       setIcon(channel.icon || 'hash');
       setIsPrivate(channel.is_private);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, channel]);
 
   const handleSave = async () => {
     if (!user || !name.trim()) return;
