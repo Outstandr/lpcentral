@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Paperclip, X, FileIcon, Image as ImageIcon, ArrowLeft, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
+import { usePresence } from '@/hooks/usePresence';
 import { DMConversation, DirectMessage, Profile } from '@/types/messenger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { TypingIndicator } from './TypingIndicator';
 
 interface DMChatWindowProps {
   conversation: DMConversation | null;
@@ -19,6 +22,8 @@ interface DMChatWindowProps {
 export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWindowProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(undefined, conversation?.id);
+  const { getPresence } = usePresence();
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [newMessage, setNewMessage] = useState('');
@@ -26,6 +31,14 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle typing indicator on input change
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    if (e.target.value.trim()) {
+      startTyping();
+    }
+  };
 
   useEffect(() => {
     if (!conversation) return;
@@ -161,13 +174,13 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
     } else {
       setNewMessage('');
       setSelectedFile(null);
+      stopTyping();
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // 50MB limit for videos, 10MB for other files
       const maxSize = file.type.startsWith('video/') ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxSize) {
         toast({
@@ -197,6 +210,8 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
     );
   }
 
+  const presence = getPresence(otherUser.user_id);
+
   return (
     <div className="flex flex-1 w-full flex-col bg-white">
       {/* DM Header */}
@@ -212,10 +227,18 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/20 text-sm font-medium text-teal-600">
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/20 text-sm font-medium text-teal-600">
             {otherUser.username[0]?.toUpperCase() || '?'}
+            <span className={cn(
+              "absolute bottom-0 right-0 h-2 w-2 rounded-full ring-2 ring-white",
+              presence?.status === 'online' ? 'bg-emerald-500' :
+              presence?.status === 'away' ? 'bg-amber-500' : 'bg-slate-400'
+            )} />
           </div>
-          <h2 className="font-semibold text-slate-900">{otherUser.username}</h2>
+          <div>
+            <h2 className="font-semibold text-slate-900">{otherUser.username}</h2>
+            <p className="text-xs text-slate-500 capitalize">{presence?.status || 'offline'}</p>
+          </div>
         </div>
       </div>
 
@@ -287,6 +310,13 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
         </div>
       </ScrollArea>
 
+      {/* Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <div className="px-6 py-2 border-t border-slate-100">
+          <TypingIndicator usernames={typingUsers.map(u => u.username)} />
+        </div>
+      )}
+
       {/* Message Input */}
       <div className="border-t border-slate-200 p-4 bg-white safe-bottom">
         {selectedFile && (
@@ -328,7 +358,7 @@ export function DMChatWindow({ conversation, otherUser, onMobileBack }: DMChatWi
           </Button>
           <Input
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleMessageChange}
             placeholder={`Message ${otherUser.username}`}
             className="flex-1 border-slate-200 bg-slate-50 focus-visible:ring-teal-500"
             disabled={isSending}

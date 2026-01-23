@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send, Paperclip, X, FileIcon, Image as ImageIcon, Hash, Lock, ArrowLeft, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 import { Channel, Message, Profile } from '@/types/messenger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,7 @@ import { SearchMessagesBar } from './SearchMessagesBar';
 import { InviteMembersModal } from './InviteMembersModal';
 import { ChannelSettingsModal } from './ChannelSettingsModal';
 import { MessageBubble } from './MessageBubble';
+import { TypingIndicator } from './TypingIndicator';
 
 interface ChatWindowProps {
   channel: Channel | null;
@@ -27,6 +29,7 @@ interface ChatWindowProps {
 export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobileBack }: ChatWindowProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { typingUsers, startTyping, stopTyping } = useTypingIndicator(channel?.id, undefined);
   const [messages, setMessages] = useState<Message[]>([]);
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [newMessage, setNewMessage] = useState('');
@@ -40,6 +43,14 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle typing indicator on input change
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    if (e.target.value.trim()) {
+      startTyping();
+    }
+  };
 
   useEffect(() => {
     if (!channel) return;
@@ -180,6 +191,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
     } else {
       setNewMessage('');
       setSelectedFile(null);
+      stopTyping();
     }
   };
 
@@ -318,6 +330,13 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
         </div>
       </ScrollArea>
 
+      {/* Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <div className="px-6 py-2 border-t border-slate-100">
+          <TypingIndicator usernames={typingUsers.map(u => u.username)} />
+        </div>
+      )}
+
       {/* Message Input */}
       <div className="border-t border-slate-200 p-4 bg-white safe-bottom">
         {selectedFile && (
@@ -359,7 +378,7 @@ export function ChatWindow({ channel, onChannelUpdate, onChannelDelete, onMobile
           </Button>
           <Input
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            onChange={handleMessageChange}
             placeholder={`Message #${channel.name}`}
             className="flex-1 border-slate-200 bg-slate-50 focus-visible:ring-teal-500"
             disabled={isSending}
