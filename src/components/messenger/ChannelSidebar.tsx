@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Plus, LogOut, User, Lock, UserPlus, Mic, Settings } from 'lucide-react';
+import { Plus, LogOut, User, Lock, UserPlus, Mic, Settings, Circle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useUnreadStatus } from '@/hooks/useUnreadStatus';
+import { usePresence } from '@/hooks/usePresence';
 import { Channel, Profile, DMConversation } from '@/types/messenger';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -41,6 +43,35 @@ interface DMWithProfile {
   otherUser: Profile;
 }
 
+// Presence indicator component
+function PresenceIndicator({ status, size = 'sm' }: { status: 'online' | 'away' | 'offline'; size?: 'sm' | 'md' }) {
+  const sizeClasses = size === 'sm' ? 'h-2 w-2' : 'h-2.5 w-2.5';
+  const statusColors = {
+    online: 'bg-emerald-500',
+    away: 'bg-amber-500',
+    offline: 'bg-slate-500',
+  };
+
+  return (
+    <span className={cn(
+      'absolute bottom-0 right-0 rounded-full ring-2 ring-slate-900',
+      sizeClasses,
+      statusColors[status]
+    )} />
+  );
+}
+
+// Unread badge component
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  
+  return (
+    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-500 px-1.5 text-xs font-semibold text-white">
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
+
 export function ChannelSidebar({ 
   selectedChannel, 
   onSelectChannel, 
@@ -54,6 +85,9 @@ export function ChannelSidebar({
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
+  const { channelUnreads, dmUnreads, markChannelAsRead, markDMAsRead, totalUnreadChannels, totalUnreadDMs } = useUnreadStatus();
+  const { getPresence, myStatus } = usePresence();
+  
   const [localChannels, setLocalChannels] = useState<Channel[]>([]);
   
   // Use external channels if provided, otherwise use local state
@@ -84,7 +118,6 @@ export function ChannelSidebar({
     } else {
       setLocalChannels(data as Channel[]);
       onChannelsLoaded?.(data as Channel[]);
-      // Don't auto-select a channel - let user tap to navigate
     }
   };
 
@@ -116,7 +149,6 @@ export function ChannelSidebar({
       return;
     }
 
-    // Fetch other user profiles for each conversation
     const conversations = data as DMConversation[];
     const otherUserIds = conversations.map(c => 
       c.participant_one === user.id ? c.participant_two : c.participant_one
@@ -137,11 +169,21 @@ export function ChannelSidebar({
         const dmsWithProfiles: DMWithProfile[] = conversations.map(c => ({
           conversation: c,
           otherUser: profilesMap[c.participant_one === user.id ? c.participant_two : c.participant_one]
-        })).filter(dm => dm.otherUser); // Filter out any without profile
+        })).filter(dm => dm.otherUser);
 
         setDmConversations(dmsWithProfiles);
       }
     }
+  };
+
+  const handleSelectChannel = (channel: Channel) => {
+    onSelectChannel(channel);
+    markChannelAsRead(channel.id);
+  };
+
+  const handleSelectDM = (conversation: DMConversation, otherUser: Profile) => {
+    onSelectDM(conversation, otherUser);
+    markDMAsRead(conversation.id);
   };
 
   const handleCreateChannel = async (e: React.FormEvent) => {
@@ -171,7 +213,6 @@ export function ChannelSidebar({
       return;
     }
 
-    // If private, auto-add creator as member
     if (newChannel.isPrivate) {
       await supabase.from('channel_members').insert({
         channel_id: data.id,
@@ -183,11 +224,20 @@ export function ChannelSidebar({
     setLocalChannels([...channels, data as Channel]);
     setNewChannel({ name: '', description: '', isPrivate: false, icon: 'hash' });
     setIsCreateOpen(false);
-    onSelectChannel(data as Channel);
+    handleSelectChannel(data as Channel);
     toast({
       title: "Channel created!",
       description: `#${data.name} is ready to use.`
     });
+  };
+
+  // Get presence status color for current user
+  const getMyPresenceColor = () => {
+    switch (myStatus) {
+      case 'online': return 'bg-emerald-500';
+      case 'away': return 'bg-amber-500';
+      default: return 'bg-slate-500';
+    }
   };
 
   return (
@@ -207,7 +257,14 @@ export function ChannelSidebar({
       {/* Channels List */}
       <ScrollArea className="flex-1 px-2 py-4">
         <div className="mb-2 flex items-center justify-between px-2">
-          <span className="text-xs font-semibold uppercase text-slate-400">Channels</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase text-slate-400">Channels</span>
+            {totalUnreadChannels > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-500/20 px-1 text-[10px] font-medium text-teal-400">
+                {totalUnreadChannels}
+              </span>
+            )}
+          </div>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="h-5 w-5 text-slate-400 hover:text-white">
@@ -276,43 +333,69 @@ export function ChannelSidebar({
         </div>
 
         <div className="space-y-0.5">
-          {channels.map((channel) => (
-            <div key={channel.id} className="group flex items-center">
-              <button
-                onClick={() => onSelectChannel(channel)}
-                className={cn(
-                  "flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors",
-                  selectedChannel?.id === channel.id && !selectedConversation
-                    ? "bg-teal-500/20 text-teal-300"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                )}
-              >
-                {(() => {
-                  const IconComponent = channel.is_private ? Lock : getChannelIcon(channel.icon);
-                  return <IconComponent className="h-4 w-4 shrink-0" />;
-                })()}
-                <span className="truncate">{channel.name}</span>
-              </button>
-              {channel.is_private && channel.created_by === user?.id && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setInviteChannel(channel);
-                  }}
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white"
+          {channels.map((channel) => {
+            const unread = channelUnreads.get(channel.id);
+            const hasUnread = (unread?.count || 0) > 0;
+            const isSelected = selectedChannel?.id === channel.id && !selectedConversation;
+
+            return (
+              <div key={channel.id} className="group flex items-center">
+                <button
+                  onClick={() => handleSelectChannel(channel)}
+                  className={cn(
+                    "flex flex-1 items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-all",
+                    isSelected
+                      ? "bg-teal-500/20 text-teal-300"
+                      : hasUnread
+                        ? "text-white font-medium hover:bg-slate-800"
+                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  )}
                 >
-                  <UserPlus className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          ))}
+                  {(() => {
+                    const IconComponent = channel.is_private ? Lock : getChannelIcon(channel.icon);
+                    return <IconComponent className={cn("h-4 w-4 shrink-0", hasUnread && "text-teal-400")} />;
+                  })()}
+                  <span className="flex-1 truncate">{channel.name}</span>
+                  <UnreadBadge count={unread?.count || 0} />
+                </button>
+                {channel.is_private && channel.created_by === user?.id && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInviteChannel(channel);
+                    }}
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white"
+                  >
+                    <UserPlus className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Message Preview for selected channel */}
+        {selectedChannel && channelUnreads.get(selectedChannel.id)?.lastMessagePreview && (
+          <div className="mx-2 mt-2 rounded-lg bg-slate-800/50 p-2 text-xs text-slate-400">
+            <span className="font-medium text-slate-300">
+              {channelUnreads.get(selectedChannel.id)?.lastMessageSender}:
+            </span>{' '}
+            {channelUnreads.get(selectedChannel.id)?.lastMessagePreview}...
+          </div>
+        )}
 
         {/* Direct Messages Section */}
         <div className="mt-6 mb-2 flex items-center justify-between px-2">
-          <span className="text-xs font-semibold uppercase text-slate-400">Direct Messages</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase text-slate-400">Direct Messages</span>
+            {totalUnreadDMs > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-teal-500/20 px-1 text-[10px] font-medium text-teal-400">
+                {totalUnreadDMs}
+              </span>
+            )}
+          </div>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -324,23 +407,41 @@ export function ChannelSidebar({
         </div>
 
         <div className="space-y-0.5">
-          {dmConversations.map(({ conversation, otherUser }) => (
-            <button
-              key={conversation.id}
-              onClick={() => onSelectDM(conversation, otherUser)}
-              className={cn(
-                "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors",
-                selectedConversation?.id === conversation.id
-                  ? "bg-teal-500/20 text-teal-300"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              )}
-            >
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-xs font-medium text-teal-400">
-                {otherUser.username[0]?.toUpperCase() || '?'}
-              </div>
-              <span className="truncate">{otherUser.username}</span>
-            </button>
-          ))}
+          {dmConversations.map(({ conversation, otherUser }) => {
+            const unread = dmUnreads.get(conversation.id);
+            const hasUnread = (unread?.count || 0) > 0;
+            const isSelected = selectedConversation?.id === conversation.id;
+            const presence = getPresence(otherUser.user_id);
+
+            return (
+              <button
+                key={conversation.id}
+                onClick={() => handleSelectDM(conversation, otherUser)}
+                className={cn(
+                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-all",
+                  isSelected
+                    ? "bg-teal-500/20 text-teal-300"
+                    : hasUnread
+                      ? "text-white font-medium hover:bg-slate-800"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                )}
+              >
+                <div className="relative flex h-6 w-6 items-center justify-center rounded-full bg-teal-500/20 text-xs font-medium text-teal-400 shrink-0">
+                  {otherUser.username[0]?.toUpperCase() || '?'}
+                  <PresenceIndicator status={presence?.status || 'offline'} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block truncate">{otherUser.username}</span>
+                  {hasUnread && unread?.lastMessagePreview && (
+                    <span className="block truncate text-[11px] text-slate-500">
+                      {unread.lastMessagePreview}
+                    </span>
+                  )}
+                </div>
+                <UnreadBadge count={unread?.count || 0} />
+              </button>
+            );
+          })}
           {dmConversations.length === 0 && (
             <p className="px-2 text-xs text-slate-500">No conversations yet</p>
           )}
@@ -371,14 +472,18 @@ export function ChannelSidebar({
       {/* User Footer */}
       <div className="border-t border-slate-700 p-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-sm">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-sm shrink-0">
             <User className="h-4 w-4 text-white" />
+            <span className={cn(
+              "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full ring-2 ring-slate-900",
+              getMyPresenceColor()
+            )} />
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium text-white">
               {profile?.username || user?.email?.split('@')[0]}
             </p>
-            <p className="truncate text-xs text-slate-400">{user?.email}</p>
+            <p className="truncate text-xs text-slate-400 capitalize">{myStatus}</p>
           </div>
           {isAdmin && (
             <Button
@@ -417,12 +522,11 @@ export function ChannelSidebar({
         open={isStartDMOpen}
         onOpenChange={setIsStartDMOpen}
         onStartConversation={(conversation, otherUser) => {
-          // Add to list if not already there
           const exists = dmConversations.some(dm => dm.conversation.id === conversation.id);
           if (!exists) {
             setDmConversations(prev => [{ conversation, otherUser }, ...prev]);
           }
-          onSelectDM(conversation, otherUser);
+          handleSelectDM(conversation, otherUser);
         }}
       />
 
