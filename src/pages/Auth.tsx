@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Auth() {
@@ -69,9 +69,11 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 safe-all">
       <Card className="w-full max-w-md border-slate-700 bg-slate-800/50 backdrop-blur shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 shadow-lg shadow-teal-500/20">
-            <MessageSquare className="h-7 w-7 text-white" />
-          </div>
+          <img 
+            src="/logo-placeholder.svg" 
+            alt="Leaders Team" 
+            className="mx-auto mb-4 h-14 w-14 rounded-2xl shadow-lg shadow-teal-500/20 object-cover"
+          />
           <CardTitle className="text-2xl font-bold text-white">Leaders Team</CardTitle>
           <CardDescription className="text-slate-400">
             Connect with your team in real-time
