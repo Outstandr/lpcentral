@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Mic, Square, Pause, Play, Loader2, X, Settings, AlertTriangle } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
-import { useNativeMicrophone, PermissionStatus } from '@/hooks/useNativeMicrophone';
 import { haptics } from '@/hooks/useHaptics';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -49,14 +48,13 @@ export function MeetingRecorderModal({
   const [selectedChannel, setSelectedChannel] = useState<string>('none');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
-  const [localPermissionStatus, setLocalPermissionStatus] = useState<PermissionStatus>('unknown');
-  const [isCheckingPermission, setIsCheckingPermission] = useState(false);
 
   const {
     isRecording,
     isPaused,
     recordingTime,
     audioBlob,
+    permissionDenied,
     startRecording,
     stopRecording,
     pauseRecording,
@@ -64,60 +62,12 @@ export function MeetingRecorderModal({
     resetRecording,
   } = useAudioRecorder();
 
-  const { 
-    requestMicrophonePermission, 
-    checkMicrophoneAvailable, 
-    checkPermissionStatus 
-  } = useNativeMicrophone();
-
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform();
 
-  // Check permission status when modal opens
-  useEffect(() => {
-    if (open && isNative) {
-      setIsCheckingPermission(true);
-      checkPermissionStatus()
-        .then(status => {
-          setLocalPermissionStatus(status);
-        })
-        .finally(() => {
-          setIsCheckingPermission(false);
-        });
-    }
-  }, [open, isNative, checkPermissionStatus]);
-
   const handleStartRecording = async () => {
     try {
-      // Haptic feedback on tap
       await haptics.medium();
-
-      // Check if microphone is available
-      const hasMic = await checkMicrophoneAvailable();
-      if (!hasMic) {
-        await haptics.error();
-        toast({
-          title: 'No Microphone Found',
-          description: 'Please connect a microphone to record meetings.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Request permission first on native platforms
-      const hasPermission = await requestMicrophonePermission();
-      if (!hasPermission) {
-        setLocalPermissionStatus('denied');
-        await haptics.error();
-        toast({
-          title: 'Microphone Access Required',
-          description: 'Please grant microphone permission to record meetings.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setLocalPermissionStatus('granted');
       await startRecording();
       await haptics.success();
     } catch (error: any) {
@@ -234,7 +184,6 @@ export function MeetingRecorderModal({
     resetRecording();
     setTitle('');
     setSelectedChannel('none');
-    setLocalPermissionStatus('unknown');
     onOpenChange(false);
   };
 
@@ -247,8 +196,8 @@ export function MeetingRecorderModal({
     return 'Check your browser settings to enable microphone access.';
   };
 
-  // Permission denied state for native
-  const showPermissionDenied = isNative && localPermissionStatus === 'denied' && !isRecording && !audioBlob;
+  // Permission denied state - now comes from useAudioRecorder
+  const showPermissionDenied = permissionDenied && !isRecording && !audioBlob;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -275,13 +224,7 @@ export function MeetingRecorderModal({
                     variant="outline"
                     size="sm"
                     className="mt-2"
-                    onClick={async () => {
-                      // Re-request permission
-                      const granted = await requestMicrophonePermission();
-                      if (granted) {
-                        setLocalPermissionStatus('granted');
-                      }
-                    }}
+                    onClick={handleStartRecording}
                   >
                     <Settings className="mr-2 h-4 w-4" />
                     Try Again
@@ -322,20 +265,13 @@ export function MeetingRecorderModal({
               </div>
             )}
 
-            {isCheckingPermission && (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Checking permissions...</span>
-              </div>
-            )}
-
             {/* Controls */}
             <div className="flex items-center gap-3">
               {!isRecording && !audioBlob && !showPermissionDenied && (
                 <Button
                   onClick={handleStartRecording}
                   className="h-16 w-16 rounded-full bg-destructive hover:bg-destructive/90"
-                  disabled={isProcessing || isCheckingPermission}
+                  disabled={isProcessing}
                 >
                   <Mic className="h-8 w-8" />
                 </Button>
