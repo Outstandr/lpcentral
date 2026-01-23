@@ -100,6 +100,11 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
   }, []);
 
   const startRecordingNative = useCallback(async () => {
+    // DIAGNOSTIC: Log platform info
+    console.log('[useAudioRecorder] ===== NATIVE RECORDING START =====');
+    console.log('[useAudioRecorder] isNativePlatform:', Capacitor.isNativePlatform());
+    console.log('[useAudioRecorder] getPlatform:', Capacitor.getPlatform());
+    
     // ALWAYS request permission before starting native recording
     const hasPermission = await requestNativePermission();
     
@@ -109,7 +114,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
     }
 
     try {
-      console.log('[useAudioRecorder] Starting native recording...');
+      console.log('[useAudioRecorder] Permission granted, starting native recording...');
       const result = await VoiceRecorder.startRecording();
       console.log('[useAudioRecorder] Start recording result:', result.value);
       
@@ -119,6 +124,7 @@ export function useAudioRecorder(): UseAudioRecorderReturn {
         setRecordingTime(0);
         setAudioBlob(null);
         startTimer();
+        console.log('[useAudioRecorder] Recording started successfully');
       } else {
         throw new Error('Failed to start native recording');
       }
