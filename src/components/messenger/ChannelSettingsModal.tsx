@@ -54,6 +54,7 @@ export function ChannelSettingsModal({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Only reset form when modal opens, not when channel prop updates
   useEffect(() => {
     if (open) {
       setName(channel.name);
@@ -61,7 +62,8 @@ export function ChannelSettingsModal({
       setIcon(channel.icon || 'hash');
       setIsPrivate(channel.is_private);
     }
-  }, [open, channel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleSave = async () => {
     if (!user || !name.trim()) return;
