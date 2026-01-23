@@ -74,8 +74,9 @@ export function ChannelSettingsModal({
 
     setIsSaving(true);
 
+    // Preserve user's capitalization for display names
     const updates = {
-      name: name.toLowerCase().replace(/\s+/g, '-'),
+      name: name.trim(),
       description: description || null,
       icon,
       is_private: isPrivate,
