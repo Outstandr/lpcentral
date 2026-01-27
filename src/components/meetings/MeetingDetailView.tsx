@@ -11,12 +11,14 @@ import {
   Calendar,
   Hash,
   Play,
+  RefreshCw,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface Meeting {
   id: string;
@@ -62,11 +64,13 @@ interface MeetingDetailViewProps {
 }
 
 export function MeetingDetailView({ meetingId }: MeetingDetailViewProps) {
+  const { toast } = useToast();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [notes, setNotes] = useState<MeetingNotes | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     fetchMeetingDetails();
@@ -123,6 +127,67 @@ export function MeetingDetailView({ meetingId }: MeetingDetailViewProps) {
     setLoading(false);
   };
 
+  const handleRegenerate = async () => {
+    if (!meeting?.transcript) {
+      toast({
+        title: 'No transcript',
+        description: 'Cannot regenerate notes without a transcript.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setRegenerating(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/regenerate-meeting-notes`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ meeting_id: meetingId }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to regenerate notes');
+      }
+
+      // Update local state with new notes
+      if (result.notes) {
+        setNotes({
+          id: result.notes.id,
+          summary: result.notes.summary,
+          key_points: result.notes.key_points as unknown as KeyPoint[] | null,
+          action_items: result.notes.action_items as unknown as ActionItem[] | null,
+          decisions: result.notes.decisions as unknown as Decision[] | null,
+        });
+      }
+
+      toast({
+        title: 'Notes regenerated',
+        description: 'AI analysis has been updated successfully.',
+      });
+
+    } catch (error: any) {
+      console.error('Error regenerating notes:', error);
+      toast({
+        title: 'Regeneration failed',
+        description: error.message || 'Failed to regenerate meeting notes.',
+        variant: 'destructive',
+      });
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -151,27 +216,49 @@ export function MeetingDetailView({ meetingId }: MeetingDetailViewProps) {
     <ScrollArea className="h-full">
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-start justify-between">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-3">
             <h1 className="text-2xl font-bold text-white">{meeting.title}</h1>
-            {meeting.status === 'processing' && (
-              <Badge variant="outline" className="border-yellow-500/50 text-yellow-400">
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                Processing
-              </Badge>
-            )}
-            {meeting.status === 'completed' && (
-              <Badge variant="outline" className="border-teal-500/50 text-teal-400">
-                Completed
-              </Badge>
-            )}
-            {meeting.status === 'failed' && (
-              <Badge variant="outline" className="border-red-500/50 text-red-400">
-                Failed
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {meeting.transcript && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerate}
+                  disabled={regenerating}
+                  className="border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                >
+                  {regenerating ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                      Regenerate
+                    </>
+                  )}
+                </Button>
+              )}
+              {meeting.status === 'processing' && (
+                <Badge variant="outline" className="border-yellow-500/50 text-yellow-400">
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  Processing
+                </Badge>
+              )}
+              {meeting.status === 'completed' && (
+                <Badge variant="outline" className="border-teal-500/50 text-teal-400">
+                  Completed
+                </Badge>
+              )}
+              {meeting.status === 'failed' && (
+                <Badge variant="outline" className="border-red-500/50 text-red-400">
+                  Failed
+                </Badge>
+              )}
+            </div>
           </div>
-          
           <div className="flex items-center gap-4 text-sm text-slate-400">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
