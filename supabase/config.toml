@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.transcribe-meeting]
 verify_jwt = false
+
+[functions.regenerate-meeting-notes]
+verify_jwt = false
