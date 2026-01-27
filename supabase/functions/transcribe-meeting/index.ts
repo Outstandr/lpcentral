@@ -147,6 +147,7 @@ serve(async (req) => {
 
     // Generate AI summary with Lovable AI
     console.log('Generating AI summary...');
+    console.log('Transcript length:', transcript.length, 'characters');
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -155,30 +156,35 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-pro',
         messages: [
           {
             role: 'system',
-            content: `You are a meeting analyst. Analyze the meeting transcript and extract key information.
-            
-Return a valid JSON object with this exact structure:
+            content: `You are an expert meeting analyst. Analyze the meeting transcript thoroughly and extract all important information.
+
+You MUST return a valid JSON object with this exact structure:
 {
-  "summary": "2-3 sentence overview of the meeting",
-  "key_points": [{"point": "...", "importance": "high|medium|low"}],
-  "action_items": [{"task": "...", "owner": "...", "deadline": "..."}],
-  "decisions": [{"decision": "...", "context": "..."}]
+  "summary": "A comprehensive 3-5 sentence overview covering the main topics, participants' perspectives, and overall outcome",
+  "key_points": [{"point": "Detailed description of the key point", "importance": "high|medium|low"}],
+  "action_items": [{"task": "Specific actionable task", "owner": "Person responsible or 'Unassigned'", "deadline": "Deadline or 'TBD'"}],
+  "decisions": [{"decision": "Clear statement of what was decided", "context": "Why this decision was made"}]
 }
 
-If there's no clear owner or deadline for an action item, use "Unassigned" or "TBD".
-Extract at least 3-5 key points if possible.
-Be concise but comprehensive.`
+Guidelines:
+- Extract ALL important discussion points, even from long meetings
+- Identify 5-10 key points for comprehensive meetings
+- Capture every action item mentioned, even implied ones
+- Note all decisions, both explicit and consensus-based
+- Use speaker names if identifiable from the transcript
+- Be thorough - this is a professional meeting record`
           },
           {
             role: 'user',
-            content: `Analyze this meeting transcript:\n\n${transcript}`
+            content: `Analyze this meeting transcript completely:\n\n${transcript}`
           }
         ],
-        temperature: 0.3,
+        temperature: 0.2,
+        max_tokens: 4000,
       }),
     });
 
@@ -187,24 +193,40 @@ Be concise but comprehensive.`
     if (aiResponse.ok) {
       const aiResult = await aiResponse.json();
       const content = aiResult.choices?.[0]?.message?.content || '';
+      console.log('AI response received, content length:', content.length);
       
       // Parse JSON from response
       try {
         // Extract JSON from potential markdown code blocks
-        let jsonStr = content;
-        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1];
+        let jsonStr = content.trim();
+        
+        // Try different patterns to extract JSON
+        const jsonBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonBlockMatch) {
+          jsonStr = jsonBlockMatch[1].trim();
+        } else {
+          // Try to find JSON object directly
+          const jsonObjectMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonObjectMatch) {
+            jsonStr = jsonObjectMatch[0];
+          }
         }
         
+        console.log('Parsing JSON, length:', jsonStr.length);
         const notes = JSON.parse(jsonStr);
+        console.log('Parsed notes successfully:', {
+          hasSummary: !!notes.summary,
+          keyPointsCount: notes.key_points?.length || 0,
+          actionItemsCount: notes.action_items?.length || 0,
+          decisionsCount: notes.decisions?.length || 0,
+        });
         
         // Insert meeting notes
         const { data: notesData, error: notesError } = await supabase
           .from('meeting_notes')
           .insert({
             meeting_id: meeting.id,
-            summary: notes.summary || '',
+            summary: notes.summary || 'No summary available',
             key_points: notes.key_points || [],
             action_items: notes.action_items || [],
             decisions: notes.decisions || [],
@@ -213,15 +235,39 @@ Be concise but comprehensive.`
           .single();
 
         if (notesError) {
-          console.error('Error saving notes:', notesError);
+          console.error('Error saving notes to database:', notesError);
         } else {
+          console.log('Meeting notes saved successfully:', notesData.id);
           meetingNotes = notesData;
         }
       } catch (parseError) {
-        console.error('Error parsing AI response:', parseError, content);
+        console.error('Error parsing AI response:', parseError);
+        console.error('Raw content (first 1000 chars):', content.substring(0, 1000));
+        
+        // Try to save a fallback note with raw summary
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('meeting_notes')
+            .insert({
+              meeting_id: meeting.id,
+              summary: 'AI analysis failed to parse. Please regenerate.',
+              key_points: [],
+              action_items: [],
+              decisions: [],
+            })
+            .select()
+            .single();
+          
+          if (!fallbackError) {
+            meetingNotes = fallbackData;
+          }
+        } catch (e) {
+          console.error('Fallback save also failed:', e);
+        }
       }
     } else {
-      console.error('AI response error:', await aiResponse.text());
+      const errorText = await aiResponse.text();
+      console.error('AI API error:', aiResponse.status, errorText);
     }
 
     // Update meeting status
