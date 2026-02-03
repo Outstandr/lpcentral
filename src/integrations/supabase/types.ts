@@ -105,6 +105,54 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_logs: {
+        Row: {
+          audio_url: string | null
+          challenges: Json | null
+          created_at: string | null
+          duration_seconds: number | null
+          energy_level: number | null
+          id: string
+          key_learnings: Json | null
+          sentiment: string | null
+          status: string | null
+          tasks_completed: Json | null
+          transcript: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          challenges?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          energy_level?: number | null
+          id?: string
+          key_learnings?: Json | null
+          sentiment?: string | null
+          status?: string | null
+          tasks_completed?: Json | null
+          transcript?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          challenges?: Json | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          energy_level?: number | null
+          id?: string
+          key_learnings?: Json | null
+          sentiment?: string | null
+          status?: string | null
+          tasks_completed?: Json | null
+          transcript?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           content: string | null
@@ -537,6 +585,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          reminder_enabled: boolean | null
+          reminder_time: string | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          reminder_enabled?: boolean | null
+          reminder_time?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          reminder_enabled?: boolean | null
+          reminder_time?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_presence: {
         Row: {
